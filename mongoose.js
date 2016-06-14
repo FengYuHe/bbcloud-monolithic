@@ -17,3 +17,4 @@ require('./models/model');
 require('./models/device');
 require('./models/revoke-token');
 require('./models/send-email');
+require('./models/analytic');
