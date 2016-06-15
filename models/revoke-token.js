@@ -2,9 +2,14 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 var RevokeTokenSchema = new Schema({
-    active: { type: Boolean, default: true },
+    uid: String,
+    active: {
+        type: Boolean,
+        default: true
+    },
     timestamp: {
-        type: Date, default: Date.now
+        type: Date,
+        default: Date.now
     }
 });
 

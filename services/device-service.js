@@ -1,6 +1,3 @@
-'use strict'
-
-
 var fs = require('fs');
 var router = require('express').Router();
 var Device = require('mongoose').model('Device');
@@ -9,6 +6,7 @@ var model = require('mongoose').model('Model');
 var UUID = require('node-uuid');
 var XLSX = require('xlsx');
 var Promise = require('bluebird');
+var _ = require('lodash');
 
 var batchState = [
   {val:-1,msg:'作废'},
@@ -26,71 +24,49 @@ function mongoIdToWebId(entity) {
   return o;
 }
 
-function checkUpdateAuth(req,res,next) {
-  var operateType = 'update';
-  checkIt(req,res,next,operateType);
+function generateBBCloudId(){
+  var manufacturerCode = 'AAA',
+      toyCode = 'BBBBBB',
+      uuid = UUID(),
+      year = new Date().getFullYear().toString().substring(2,4);
+
+  return manufacturerCode+toyCode+year+uuid;
 }
-function checkDeleteAuth(req,res,next) {
-  var operateType = 'delete';
-  checkIt(req,res,next,operateType);
+
+function saveMultiRecords(devices) {
+  var len = devices.length;
+  var perSaveNum = 10;
+  var times = Math.ceil(len / perSaveNum);
+  var start = 0 ,end = 0;
+  for (var i = 0; i < times; i++) {
+    start = perSaveNum*i;
+    end = (start + perSaveNum)>len?len:(start + perSaveNum);
+    var toSaveDevices = devices.slice(start,end)
+    Device.insertMany(toSaveDevices)
+  }
 }
-function checkBatchState(req,res,next) {
-  Batch.findById(req.body.batchId).populate({
-    path:'manufacturer',
-    select:'_id'
-  }).then(function (entity) {
-    if (entity) {
-      req.manufacturerId = entity.manufacturer._id;
-      req.deviceAmount = entity.amount;
-      if (entity.state==1) {
-        res.json({code:400, msg:'batch has success and can not be modified.'})
-      }else if(entity.state==-1){
-        res.json({code:400, msg:'batch had been deleted'})
-      }else{
-        next();
-      }
-    }else {
-      res.json({code:400,msg:'manufacturer not found'})
+
+function promiseSequentialize(promiseFactories) {
+  var chain = Promise.resolve();
+  promiseFactories.forEach(function (promiseFactory) {
+    chain = chain.then(promiseFactory);
+  });
+  return chain;
+}
+function httpRequestWechatIds(data) {
+  return Promise.resolve().then(function(){
+    //对外请求 TODO
+    if (!data) {
+      data = new Array();
     }
+    var secretStr = Math.random()+''
+    var newData = {wechatId:'wechat1'+secretStr,secret:secretStr,qrticket:'qrticketString',devicelicence:'devicelicenceString'};
+    data.push(newData);
+    return data;
   })
 }
-function checkIt(req,res,next,operateType) {
-  if (req.user.realm === 'administrator') {
-    if (checkScope(req.scope, 'devices:'+operateType)) {
-      return res.sendStatus(403);
-    }else{
-      next();
-    }
-  }else {
-    res.json({code:403,msg:'no auth to operate'})
-  }
-}
 
-function checkScope(scope, permission) {
-  scope = scope || [];
-  return scope.indexOf(permission) === -1;
-}
-function promiseSequentialize(promiseFactories) {
-    var chain = Promise.resolve();
-    promiseFactories.forEach(function (promiseFactory) {
-      chain = chain.then(promiseFactory);
-    });
-    return chain;
-  }
-function httpRequestWechatIds(data) {
-    return Promise.resolve().then(function(){
-      //对外请求 TODO
-      if (!data) {
-        data = new Array();
-      }
-      var secretStr = Math.random()+''
-      var newData = {wechatId:'wechat1'+secretStr,secret:secretStr,qrticket:'qrticketString',devicelicence:'devicelicenceString'};
-      data.push(newData);
-      return data;
-    })
-  }
-
-function reqesutWechatDeviceIds(req,res,next) {
+exports.reqesutWechatDeviceIds = function (req,res,next) {
   //请求微信硬件设备Id
   var wechatRequestArray=[];
   //请求3个设备号
@@ -101,10 +77,9 @@ function reqesutWechatDeviceIds(req,res,next) {
     req.wechatIds = data;
     next();
   })
-
 }
 
-function generateWechatDeviceIds(req,res) {
+exports.generateWechatDeviceIds = function (req,res) {
   //save wecaht device Ids
   var wechatIds = req.wechatIds;
   var batchId = req.body.batchId;
@@ -138,132 +113,145 @@ function generateWechatDeviceIds(req,res) {
   })
 }
 
-function uploadAliIds(req,res) {
-  var aliIds = req.aliIds;
-  var batchId = req.body.batchId;
-
-  //find all records by batchId
-  Device.find({batchId:batchId}).then(function(data){
-    if (!data) {
-      res.json({code:400,msg:'devices not found'})
-    }
-    if (data.length == aliIds.length) {
-
-      Promise.resolve().then(function () {
-        data.forEach(function (item,index) {
-          var deviceData = {
-            _id:item._id,
-            aliyunDeviceId:aliIds[index].device_id,
-            aliyunDeviceSecret:aliIds[index].device_secret
-          }
-          Device.findByIdAndUpdate(item._id, deviceData).then(function (entity) {
-
-          });
-        })
-        //upload batch state
-        Batch.findByIdAndUpdate(batchId,{state:batchState[3].val}).then(()=>{})
-      }).then(function () {
-        res.json({code:200, msg:'ok'})
-      })
-    }else{
-      res.json({code:400, msg:'aliIds count is not matched with batch count.'})
-    }
-  })
+function checkScope(scope, permission) {
+  scope = scope || [];
+  return scope.indexOf(permission) === -1;
 }
 
-function uploadMacIds(req,res) {
-  var macIds = req.macIds;
-  var batchId = req.body.batchId;
-
-  //find all records by batchId
-  Device.find({batchId:batchId}).then(function(data){
-    if (!data) {
-      res.json({code:400,msg:'devices not found'})
-    }
-    if (data.length == macIds.length) {
-
-      Promise.resolve().then(function () {
-        data.forEach(function (item,index) {
-          var deviceData = {
-            _id:item._id,
-            macAddress:macIds[index].macId,
-          }
-          Device.findByIdAndUpdate(item._id, deviceData).then(function (entity) {
-
-          });
-        })
-        //upload batch state
-        Batch.findByIdAndUpdate(batchId,{state:batchState[2].val}).then(()=>{})
-
-      }).then(function () {
-        res.json({code:200, msg:'ok'})
-      })
-    }else{
-      res.json({code:400, msg:'macIds count is not matched with batch count.'})
-    }
-  })
+exports.checkDeleteAuth = function (req,res,next) {
+  var operateType = 'invalidate';
+  var operateModel = 'batches';
+  checkIt(req,res,next,operateModel,operateType);
 }
 
-function saveMultiRecords(devices) {
-  console.log('save many');
-  var len = devices.length;
-  var perSaveNum = 10;
-  var times = Math.ceil(len / perSaveNum);
-  var start = 0 ,end = 0;
-  for (var i = 0; i < times; i++) {
-    console.log('save le %d 次',i);
-    start = perSaveNum*i;
-    end = (start + perSaveNum)>len?len:(start + perSaveNum);
-    var toSaveDevices = devices.slice(start,end)
-    Device.insertMany(toSaveDevices)
+function checkIt(req,res,next,operateModel,operateType) {
+  if (req.user.realm === 'administrator') {
+    if (checkScope(req.scope, operateModel+':'+operateType)) {
+      return res.sendStatus(403);
+    }else{
+      next();
+    }
+  }else {
+    res.json({code:403,msg:'no auth to operate'})
   }
 }
 
-function generateBBCloudIds(req,res) {
-  var batchId = req.body.batchId;
-  var manufacturerId = req.manufacturerId;
-  Batch.findById({_id:batchId}).then(function (data) {
-    if (data) {
-      var devicesArray = new Array(data.amount)
-      for (var i = 0; i < data.amount; i++) {
-        var bbId = generateBBCloudId();
-        var deviceData = {
-          batchId:batchId,
-          bbcloudDeviceId:bbId,
-          manufacturerId:manufacturerId
-        }
-        devicesArray.push(new Device(deviceData));
+exports.checkAliAuth = function (req,res,next) {
+  var operateType = 'importAliyunDeviceIds';
+  var operateModel = 'devices';
+  checkIt(req,res,next,operateModel,operateType);
+}
+exports.checkWechatAuth = function (req,res,next) {
+  var operateType = 'generateWechatDeviceIds';
+  var operateModel = 'devices';
+  checkIt(req,res,next,operateModel,operateType);
+}
+exports.checkMacAuth = function (req,res,next) {
+  var operateType = 'importMACs';
+  var operateModel = 'devices';
+  checkIt(req,res,next,operateModel,operateType);
+}
+exports.checkBatchState = function (req,res,next) {
+  Batch.findById(req.body.batchId).populate({
+    path:'manufacturer',
+    select:'_id'
+  }).then(function (entity) {
+    if (entity) {
+      req.manufacturerId = entity.manufacturer._id;
+      req.deviceAmount = entity.amount;
+      if (entity.state==1) {
+        res.json({code:400, msg:'batch is successful and can not be modified.'})
+      }else if(entity.state==-1){
+        res.json({code:400, msg:'batch had been deleted'})
+      }else{
+        next();
       }
-      //save many once
-      saveMultiRecords(devicesArray);
-      //upload batch state
-      Batch.findByIdAndUpdate(batchId,{state:batchState[1].val}).then(()=>{
-        res.json({code:200, msg:'ok'})
-      })
-    }else{
-      res.json({err:400, msg:'batch not found'})
+    }else {
+      res.json({code:400,msg:'manufacturer not found'})
     }
-
-  }).catch(function (err) {
-    console.log(err);
-    res.json({code:500, msg:'err'})
   })
-
 }
-
-function generateBBCloudId(){
-  var manufacturerCode = 'AAA',
-      toyCode = 'BBBBBB',
-      uuid = UUID(),
-      year = new Date().getFullYear().toString().substring(2,4);
-
-  return manufacturerCode+toyCode+year+uuid;
-
-}
-
-function parseMacIds_XLSX(req,res,next) {
+exports.parseAliIds_Json = function (req,res,next) {
   if (req.user.realm === 'administrator') {
-    var filePath = req.files.file.path;
+    var filePath = req.body.files.file.path;
+    if (filePath) {
+      fs.readFile(filePath, {encoding:'utf-8'}, function (err, bytesRead) {
+        if (err) {
+          next(err);
+        }
+        req.aliIds = JSON.parse(bytesRead);
+        next()
+      });
+    }else{
+      res.json({code:400,msg:'filePath is required'})
+    }
+  }else {
+    res.json({code:400, msg:'no auth to operate'})
+  }
+}
+
+exports.uploadAliIds = function (req,res) {
+  if (req.user.realm === 'administrator') {
+    console.log('req.body',req.body);
+    console.log('req.files',req.files);
+    if (!req.body.files) {
+      req.body.files = req.files;
+    }
+    // console.log('req.files.file:',req.files.file);
+    var filePath = req.body.files.file.path || req.files.file.path;
+    console.log('filePath',filePath);
+    if (filePath) {
+      fs.readFile(filePath, {encoding:'utf-8'}, function (err, bytesRead) {
+        if (err) {
+          next(err);
+        }
+        var aliIds = JSON.parse(bytesRead) || [];
+        var batchId = req.body.batchId;
+        //find all records by batchId
+        Device.find({batchId:batchId}).then(function(data){
+          console.log('data:',data);
+          console.log('aliIds',aliIds);
+          if (data.length === aliIds.length) {
+            Promise.resolve().then(function () {
+              data.forEach(function (item,index) {
+                var deviceData = {
+                  _id:item._id,
+                  aliyunDeviceId:aliIds[index].device_id,
+                  aliyunDeviceSecret:aliIds[index].device_secret
+                }
+                Device.findByIdAndUpdate(item._id, deviceData).then(function (entity) {
+
+                });
+              })
+              //upload batch state
+              Batch.findByIdAndUpdate(batchId,{state:batchState[3].val}).then(()=>{})
+            }).then(function () {
+              res.json({code:200, msg:'ok'})
+            })
+          }else{
+            res.json({code:400, msg:'aliIds count is not matched with batch count.'})
+          }
+        })
+      });
+    }else{
+      res.json({code:400,msg:'filePath is required'})
+    }
+  }else {
+    res.json({code:400, msg:'no auth to operate'})
+  }
+}
+
+exports.parseMacIds_XLSX = function (req,res,next) {
+  if (req.user.realm === 'administrator') {
+    // var filePath = req.body.files.file.path;
+    console.log('req.body',req.body);
+    console.log('req.files',req.files);
+    if (!req.body.files) {
+      req.body.files = req.files;
+    }
+    // console.log('req.files.file:',req.files.file);
+    var filePath = req.body.files.file.path || req.files.file.path;
+    console.log('filePath',filePath);
     if (filePath) {
       var workbook = XLSX.readFile(filePath);
       /* DO SOMETHING WITH workbook HERE */
@@ -303,32 +291,74 @@ function parseMacIds_XLSX(req,res,next) {
   }else {
     res.json({code:400, msg:'filePath is required'})
   }
-
-
 }
+exports.uploadMacIds = function (req,res) {
+  var macIds = req.macIds;
+  var batchId = req.body.batchId;
 
-function parseAliIds_Json(req,res,next) {
-  if (req.user.realm === 'administrator') {
-    var filePath = req.files.file.path;
-    if (filePath) {
-      fs.readFile(filePath, {encoding:'utf-8'}, function (err, bytesRead) {
-        if (err) {
-          next(err);
-        }
-        req.aliIds = JSON.parse(bytesRead);
-        next()
-      });
-    }else{
-      res.json({code:400,msg:'filePath is required'})
+  //find all records by batchId
+  Device.find({batchId:batchId}).then(function(data){
+    if (!data) {
+      res.json({code:400,msg:'devices not found'})
     }
-  }else {
-    res.json({code:400, msg:'no auth to operate'})
-  }
+    if (data.length == macIds.length) {
 
+      Promise.resolve().then(function () {
+        data.forEach(function (item,index) {
+          var deviceData = {
+            _id:item._id,
+            macAddress:macIds[index].macId,
+          }
+          Device.findByIdAndUpdate(item._id, deviceData).then(function (entity) {
+
+          });
+        })
+        //upload batch state
+        Batch.findByIdAndUpdate(batchId,{state:batchState[2].val}).then(()=>{})
+
+      }).then(function () {
+        res.json({code:200, msg:'ok'})
+      })
+    }else{
+      res.json({code:400, msg:'macIds count is not matched with batch count.'})
+    }
+  })
 }
 
-function deleteDevies(req,res) {
+
+exports.generateBBCloudIds = function (req,res) {
+  var batchId = req.body.batchId;
+  var manufacturerId = req.manufacturerId;
+  Batch.findById({_id:batchId}).then(function (data) {
+    if (data) {
+      var devicesArray = new Array(data.amount)
+      for (var i = 0; i < data.amount; i++) {
+        var bbId = generateBBCloudId();
+        var deviceData = {
+          batchId:batchId,
+          bbcloudDeviceId:bbId,
+          manufacturerId:manufacturerId
+        }
+        devicesArray.push(new Device(deviceData));
+      }
+      //save many once
+      saveMultiRecords(devicesArray);
+      //upload batch state
+      Batch.findByIdAndUpdate(batchId,{state:batchState[1].val}).then(()=>{
+        res.json({code:200, msg:'ok'})
+      })
+    }else{
+      res.json({err:400, msg:'batch not found'})
+    }
+
+  }).catch(function (err) {
+    console.log(err);
+    res.json({code:500, msg:'err'})
+  })
+}
+exports.invalidBatch = function (req,res,next) {
   //delete devices
+  console.log('delete');
   var batchId = req.body.batchId;
   var reason = req.body.reason || '未填写';
   //find all records by batchId
@@ -339,7 +369,7 @@ function deleteDevies(req,res) {
     Promise.resolve().then(function () {
       data.forEach(function (item,index) {
         Device.findByIdAndRemove(item._id).then(function(entity) {
-          console.log('has deleted:',item_id);
+          console.log('has deleted:',item._id);
         }).catch(function (err) {
           console.log(err);
         });
@@ -352,20 +382,23 @@ function deleteDevies(req,res) {
   })
 }
 
-function createDevices(req, res, next){
+exports.createDevices = function (req,res,next) {
   var data = req.body;
   var deviceModel;
   var devicesArray = [];
   Promise.resolve()
       .then(function(){
         return model.findById(data.model).then(function(result){
+          console.log('data.model',result);
           deviceModel = result;
           return result;
         });
       })
       .then(function(){
         var entity = new Batch(data);
+        console.log('entity',entity);
         return entity.save().then(function(result){
+          console.log('result',result);
           return result;
         })
       })
@@ -394,40 +427,12 @@ function createDevices(req, res, next){
       }).catch(next);
 }
 
-function getDeviceInfo(req, res){
+exports.getDeviceInfo = function (req, res){
   var macAddress = req.body.macAddress;
   Device.findOne({macAddress: macAddress}, function(err, device){
-    if(err) return done(err);
-    if(!device) return done(new Error('not fount'));
+    if(err) return res.json({code:500, msg: err});
+    if(!device) return res.json({code:400,msg:'devices not found'});
     var data = _.pick(device, 'bbcloudDeviceId', 'wechatDeviceId', 'aliyunDeviceId', 'aliyunDeviceSecret');
     res.json(data);
   });
 }
-
-module.exports = class DeviceService {
-  constructor() {
-
-
-
-  }
-
-  initRoute(){
-    var router = require('express').Router();
-
-    router.post('/generateBBCloudIds', checkUpdateAuth, checkBatchState, generateBBCloudIds);
-    router.post('/uploadAliIds', checkUpdateAuth, checkBatchState, parseAliIds_Json, uploadAliIds);
-    router.post('/generateWechatDeviceIds', checkUpdateAuth, checkBatchState, reqesutWechatDeviceIds, generateWechatDeviceIds);
-    router.post('/uploadMacIds', checkUpdateAuth, checkBatchState, parseMacIds_XLSX, uploadMacIds);
-    router.post('/deleteBatch', checkDeleteAuth, checkBatchState, deleteDevies);
-    router.post('/exchangeId', getDeviceInfo);
-
-    return router;
-  }
-
-  services(){
-    return {
-      createDevices: createDevices
-    }
-  }
-
-};

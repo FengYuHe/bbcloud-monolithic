@@ -21,15 +21,30 @@ var wechat = new WeChatAPI(nconf.get('wechat:appId'), nconf.get('wechat:appSecre
 router.get('/wechat/network-configure', networkConfigure);
 router.get('/wechat/', admin);
 router.post('/wechat/action/create-menu', createMenu);
+router.get('/wechat/authToken',authToken);
 
 // wechat login
 router.post('/customer/auth/wechat/authenticate', passport.authenticate('wechat', noSession), wechatLoginCallback);
 router.get('/customer/auth/wechat/callback', wechatLoginCallback);
 
+function authToken(req,res) {
+  res.send(req.query.echostr);
+}
 function wechatLoginIssueToken(req, res, next) {
 }
 
 function wechatLoginCallback(req, res, next) {
+  var theDeviceId = req.query.state;
+  var code = req.query.code;
+  client.getAccessToken(code, function (err, result) {
+    var accessToken = result.data.access_token;
+    var openid = result.data.openid;
+    console.log('err:',err);
+    console.log('result:',result);
+    console.log('openid:',openid);
+    console.log('theDeviceId:',theDeviceId);
+    res.send(theDeviceId+'|||'+openid+'==='+accessToken)
+  });
 }
 
 function getFullUrl(req) {

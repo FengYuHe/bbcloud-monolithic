@@ -62,7 +62,7 @@ function batchConfig(nga, admin) {
                     .template('<generate-wechat-id batch="entry"></generate-wechat-id>'),
       nga.field('custom_action3').label('')
                     .template('<upload-mac-ids batch="entry"></upload-mac-ids>'),
-      nga.field('deleteBatch').label('')
+      nga.field('invalidateBatch').label('')
                     .template('<delete-batch batch="entry"></delete-batch>'),
     ]);
 

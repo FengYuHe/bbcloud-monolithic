@@ -1,10 +1,35 @@
-var _ = require('lodash');
+'use strict';
+const mongoose = require('mongoose');
+const RevokeToken = mongoose.model("RevokeToken");
 
 function mongoIdToWebId(entity) {
   var o = entity.toObject();
   o.id = o._id.toString();
   delete o._id;
   return o;
+}
+// 吊销Token，设计到管理员的一些操作PUT和DELETE
+function revokeToken(id) {
+  return RevokeToken.update({
+    uid: id,
+    active: true
+  }, {
+    active: false
+  }, {
+    multi: true
+  }, (err, doc) => {
+    if (err) {
+      return {
+        code: 500,
+        msg: err
+      };
+    } else {
+      console.log(doc);
+      return {
+        code: 200
+      };
+    }
+  });
 }
 
 function checkScope(scope, permission) {
@@ -34,8 +59,12 @@ module.exports = function(resource, model) {
       var skip = parseInt((page - 1) * perPage);
       var limit = parseInt(perPage);
       var sort = {};
-      try {sort[sortField] = sortDir.toLowerCase()} catch (err) {}
-      try {filters = JSON.parse(req.query._filters)} catch (err) {}
+      try {
+        sort[sortField] = sortDir.toLowerCase()
+      } catch (err) {}
+      try {
+        filters = JSON.parse(req.query._filters)
+      } catch (err) {}
 
       Promise.all([
         Model.count(filters),
@@ -78,15 +107,17 @@ module.exports = function(resource, model) {
       }).catch(next);
     })
     .put(function(req, res, next) {
+      var id = req.params.id;
+      var data = req.body;
 
       if (req.user.realm === 'administrator') {
         if (checkScope(req.scope, resource + ':update')) {
           return res.sendStatus(403);
+        } else {
+          revokeToken(id);
         }
       }
 
-      var id = req.params.id;
-      var data = req.body;
 
       Model.findByIdAndUpdate(id, data).then(function(entity) {
         if (!entity) throw new Error('not fount');
@@ -94,14 +125,16 @@ module.exports = function(resource, model) {
       }).catch(next);
     })
     .delete(function(req, res, next) {
+      var id = req.params.id;
 
       if (req.user.realm === 'administrator') {
         if (checkScope(req.scope, resource + ':delete')) {
           return res.sendStatus(403);
+        } else {
+          revokeToken(id);
         }
       }
 
-      var id = req.params.id;
 
       Model.findByIdAndRemove(id).then(function(entity) {
         if (!entity) throw new Error('not fount');

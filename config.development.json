@@ -4,13 +4,20 @@
   "secret": "secret",
   "tokenExpiresIn": "1h",
   "wechat": {
-    "appId": "APP_ID",
-    "appSecret": "APP_SECRET",
+    "appId": "wx2d207d449dc6204a",
+    "appSecret": "d4624c36b6795d1d99dcf0547af5443d",
     "callbackUrl": "callbackurl",
     "scope": "snapi_userinfo",
     "state": "state",
     "debug": false,
-    "airkissKey": "airkisskey"
+    "airkissKey": "airkisskey",
+    "token":"token",
+    "encodingAESKey":"'IJctKyqEyfTDbtB24ItwLYxd8ChfjAQGcUAmbwrLUad'"
+  },
+  "yunwang":{
+    "appkey": "23382671",
+    "appsecret": "14891ae2f39341dec73b28f1250910b0",
+    "REST_URL": "http://gw.api.taobao.com/router/rest"
   },
   "nodemailerTransporter": {
     "host": "smtpdm.aliyun.com",

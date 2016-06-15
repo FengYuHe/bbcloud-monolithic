@@ -23,71 +23,103 @@ module.exports = class ManufacturerService extends AuthService {
   }
 
   createTokenExtras(user, done) {
-    this.model.findById(user.id).then(function (manufacturerAccount) {
+    this.model.findById(user.id).then(function(manufacturerAccount) {
       var manufacturer;
-      try { manufacturer = manufacturerAccount.manufacturer.toString() } catch (err) { }
-      done(null, { manufacturer });
+      try {
+        manufacturer = manufacturerAccount.manufacturer.toString()
+      } catch (err) {}
+      done(null, {
+        manufacturer
+      });
     }).catch(done);
   }
 
   getModelDataFromRequest(body) {
     var email = body.email;
-    return { email };
+    return {
+      email
+    };
   }
 
   auth() {
     let router = require('express').Router();
-    router.post('/auth/manufacturer/auth', passport.authenticate('jwt', { session: false }), (req, res) => {
+    router.post('/auth/manufacturer/auth', passport.authenticate('jwt', {
+      session: false
+    }), (req, res) => {
       let id = req.user.sub;
-      console.log('body:',req.body);
+      console.log('body:', req.body);
       var entity = new this.manufacturerModel(req.body);
       var accountModel = this.model;
-      entity.save().then(function(){
+      entity.save().then(function() {
         //update account
-        accountModel.findByIdAndUpdate(id,{manufacturer:entity._id}).then(function (account) {
+        accountModel.findByIdAndUpdate(id, {
+          manufacturer: entity._id
+        }).then(function(account) {
           if (!account) throw new Error('not fount');
           var o = account.toObject();
           o.id = o._id.toString();
           delete o._id;
           res.json(o)
-        }).catch(function(e){
-          console.log('update account error :',e);
+        }).catch(function(e) {
+          console.log('update account error :', e);
         });
-      }).catch(function(e){
+      }).catch(function(e) {
         console.log(e);
-        res.json({code:500,msg:'save error'})
-      })
-    })
+        res.json({
+          code: 500,
+          msg: 'save error'
+        })
+      });
+    });
     return router;
   }
 
   changePwd() {
     let router = require('express').Router();
-    router.post('/auth/manufacturer/changeOwnPwd', passport.authenticate('jwt', { session: false }), (req, res) => {
+    router.post('/auth/manufacturer/changeOwnPwd', passport.authenticate('jwt', {
+      session: false
+    }), (req, res) => {
       let id = req.user.sub;
       let oldPassword = req.body.oldPassword;
       let newPassword = req.body.newPassword;
 
       if (!id || !oldPassword || !newPassword) {
-        res.json({ code: 500, msg: 'Can not change password due to wrong args.' });
+        res.json({
+          code: 500,
+          msg: 'Can not change password due to wrong args.'
+        });
       } else {
         this.model.findById(id, (err, doc) => {
           if (err) {
-            res.json({ code: 500, msg: 'Can not change password due to wrong id.' });
+            res.json({
+              code: 500,
+              msg: 'Can not change password due to wrong id.'
+            });
           } else {
             doc.authenticate(oldPassword, (err, admin) => {
               if (err || !admin) {
-                res.json({ code: 500, msg: 'Can not change password due to wrong password.' });
+                res.json({
+                  code: 500,
+                  msg: 'Can not change password due to wrong password.'
+                });
               } else {
                 admin.setPassword(newPassword, (err, admin) => {
                   if (err) {
-                    res.json({ code: 500, msg: 'Can not change password due to password hash with salt error.' });
+                    res.json({
+                      code: 500,
+                      msg: 'Can not change password due to password hash with salt error.'
+                    });
                   } else {
                     admin.save(err => {
                       if (err) {
-                        res.json({ code: 500, msg: 'Can not change password due to mongodb save error.' });
+                        res.json({
+                          code: 500,
+                          msg: 'Can not change password due to mongodb save error.'
+                        });
                       } else {
-                        res.json({ code: 200 });
+                        res.json({
+                          code: 200
+                        });
                       };
                     });
                   };
@@ -111,43 +143,69 @@ module.exports = class ManufacturerService extends AuthService {
     let _isRevokedJwtId = this._isRevokedJwtId;
     let _revokeToken = this._revokeToken;
     router.post('/auth/manufacturer/setPwd', setPwd, this._errorHandler);
-    router.post('/auth/manufacturer/resetPwd', expressJwt({ secret: 'secret', isRevoked: this._expressJwtRevoked }), resetPwd, this._errorHandler);
+    router.post('/auth/manufacturer/resetPwd', resetPwd, this._errorHandler);
     return router;
 
     function resetPwd(req, res, next) {
       let expiresIn = nconf.get('tokenExpiresIn');
       let email = req.body.email;
-      co(function* () {
+      co(function*() {
         if (!emailReg.test(email)) {
-          next({ code: 500, msg: "Not a vaild email." });
+          next({
+            code: 500,
+            msg: "Not a vaild email."
+          });
         } else {
           let user = yield new Promise((resolve, reject) => {
-            Model.findByUsername(email, (err, user) => {//确认数据库中有这个邮箱
+            Model.findByUsername(email, (err, user) => { //确认数据库中有这个邮箱
               if (!(err || user)) {
-                reject({ code: 500, msg: "This email has not been registered." });
+                reject({
+                  code: 500,
+                  msg: "This email has not been registered."
+                });
               } else {
                 resolve(user);
               }
             });
           });
           let sendEmailDoc = yield new Promise((resolve, reject) => {
-            SendEmail.findOne({ user: user._id.toString(), type: "resetPwd" }).sort({ "timestamp": "desc" }).exec((err, sendEmailLog) => {
+            SendEmail.findOne({
+              user: user._id.toString(),
+              type: "resetPwd"
+            }).sort({
+              "timestamp": "desc"
+            }).exec((err, sendEmailLog) => {
               console.log(sendEmailLog);
               if (sendEmailLog) {
                 let nowTime = moment();
                 let sendEmailTime = moment(sendEmailLog.timestamp).add(nconf.get("sendMailDelay"), 'seconds');
-                if (!sendEmailTime.isBefore(nowTime)) {//防止邮件频繁发送
-                  reject({ code: 500, msg: "Please wait for a moment to send another email." });
+                if (!sendEmailTime.isBefore(nowTime)) { //防止邮件频繁发送
+                  reject({
+                    code: 500,
+                    msg: "Please wait for a moment to send another email."
+                  });
                 }
               }
-              resolve(new SendEmail({ user, type: 'resetPwd' }));
+              resolve(new SendEmail({
+                user,
+                type: 'resetPwd'
+              }));
             });
           });
           let revokeTokenDoc = yield Promise.resolve(new RevokeToken({}));
           let token = yield new Promise((resolve, reject) => {
-            jwt.sign({ sendEmailId: sendEmailDoc._id.toString() }, nconf.get('secret'), { subject: user._id.toString(), expiresIn, jwtid: revokeTokenDoc._id.toString() }, (err, token) => {
+            jwt.sign({
+              sendEmailId: sendEmailDoc._id.toString()
+            }, nconf.get('secret'), {
+              subject: user._id.toString(),
+              expiresIn,
+              jwtid: revokeTokenDoc._id.toString()
+            }, (err, token) => {
               if (err) {
-                reject({ code: 500, msg: "Jwt generate error, please retry." });
+                reject({
+                  code: 500,
+                  msg: "Jwt generate error, please retry."
+                });
               } else {
                 resolve(token);
               }
@@ -173,7 +231,10 @@ module.exports = class ManufacturerService extends AuthService {
           yield new Promise((resolve, reject) => {
             nodemailer.createTransport(nconf.get("nodemailerTransporter")).sendMail(mailOptions, (err, info) => {
               if (err) {
-                reject({ code: 500, msg: "Send email failed, please retry." });
+                reject({
+                  code: 500,
+                  msg: "Send email failed, please retry."
+                });
               } else {
                 resolve(true);
               }
@@ -182,7 +243,10 @@ module.exports = class ManufacturerService extends AuthService {
           yield new Promise((resolve, reject) => {
             revokeTokenDoc.save(err => {
               if (err) {
-                reject({ code: 500, msg: "Error: " + JSON.stringify(err) })
+                reject({
+                  code: 500,
+                  msg: "Error: " + JSON.stringify(err)
+                })
               } else {
                 resolve(true);
               }
@@ -191,9 +255,16 @@ module.exports = class ManufacturerService extends AuthService {
           yield new Promise((resolve, reject) => {
             sendEmailDoc.save(err => {
               if (err) {
-                reject({ code: 500, msg: "Send email log can not save to database, please retry." });
+                reject({
+                  code: 500,
+                  msg: "Send email log can not save to database, please retry."
+                });
               } else {
-                resolve(res.json({ code: 200, msg: "We have send a email to you, please check your email.", token }));
+                resolve(res.json({
+                  code: 200,
+                  msg: "We have send a email to you, please check your email.",
+                  token
+                }));
               }
             });
           });
@@ -207,11 +278,14 @@ module.exports = class ManufacturerService extends AuthService {
     function setPwd(req, res, next) {
       let password = req.body.password;
       let token = req.body.token;
-      co(function* () {
+      co(function*() {
         let decode = yield new Promise((resolve, reject) => {
-          jwt.verify(token, nconf.get('secret'), (err, decode) => {//确认token有效
+          jwt.verify(token, nconf.get('secret'), (err, decode) => { //确认token有效
             if (err) {
-              reject({ code: 500, msg: JSON.stringify(err) });
+              reject({
+                code: 500,
+                msg: JSON.stringify(err)
+              });
             } else {
               resolve(decode);
             }
@@ -221,21 +295,30 @@ module.exports = class ManufacturerService extends AuthService {
         let userId = decode.sub;
         let jti = decode.jti;
         if (!(yield _isRevokedJwtId(jti))) {
-          return yield Promise.reject({ code: 500, msg: "Not a valid token." });
+          return yield Promise.reject({
+            code: 500,
+            msg: "Not a valid token."
+          });
         } else {
           let sendEmailLog = yield new Promise((resolve, reject) => {
-            SendEmail.findById(sendEmailId, (err, sendEmailLog) => {//确认邮件发送的日志数据库中存在这个记录
+            SendEmail.findById(sendEmailId, (err, sendEmailLog) => { //确认邮件发送的日志数据库中存在这个记录
               if (err) {
-                reject({ code: 500, msg: "Not a valid token." });
+                reject({
+                  code: 500,
+                  msg: "Not a valid token."
+                });
               } else {
                 resolve(sendEmailLog);
               }
             });
           });
           let user = yield new Promise((resolve, reject) => {
-            Model.findById(userId, (err, user) => {//查找用户
+            Model.findById(userId, (err, user) => { //查找用户
               if (err) {
-                reject({ code: 500, msg: "Not a valid user." })
+                reject({
+                  code: 500,
+                  msg: "Not a valid user."
+                })
               } else {
                 resolve(user);
               }
@@ -243,15 +326,24 @@ module.exports = class ManufacturerService extends AuthService {
           });
           yield _revokeToken(jti);
           yield new Promise((resolve, reject) => {
-            user.setPassword(password, (err, userdoc) => {//设置密码
+            user.setPassword(password, (err, userdoc) => { //设置密码
               if (err) {
-                reject({ code: 500, msg: "Can not set password." });
+                reject({
+                  code: 500,
+                  msg: "Can not set password."
+                });
               } else {
                 userdoc.save(err => {
                   if (err) {
-                    reject({ code: 500, msg: "Can not set password." });
+                    reject({
+                      code: 500,
+                      msg: "Can not set password."
+                    });
                   } else {
-                    resolve(next({ code: 200, msg: "OK" }));
+                    resolve(next({
+                      code: 200,
+                      msg: "OK"
+                    }));
                   }
                 });
               }

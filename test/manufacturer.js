@@ -109,7 +109,7 @@ describe('厂家账户测试', () => {
             });
         });
 
-        it('频繁利用邮件找回密码', done => {
+        it('利用失效邮件找回密码', done => {
             option.body.email = email;
             option.headers.Authorization = Authorization + token;
             request.post(option, (err, res, body) => {
@@ -120,6 +120,7 @@ describe('厂家账户测试', () => {
                 done();
             });
         });
+
         describe('重设密码', () => {
             let option = {
                 url: url.resolve(baseUrl, "/auth/manufacturer/setPwd"),
@@ -194,7 +195,7 @@ describe('厂家功能操作', () => {
             },
             json: true
         };
-        
+       
         it('未认证厂家创建型号', done => {
             // TODO 暂时性返回错误, 完善错误后修改
             option.headers.Authorization = Authorization + token;
@@ -205,7 +206,7 @@ describe('厂家功能操作', () => {
                 done();
             });
         });
-        
+       
         it('厂家认证', done => {
             let option = {
                 url: url.resolve(baseUrl, "/auth/manufacturer/auth"),
@@ -260,7 +261,7 @@ describe('厂家功能操作', () => {
                 done();
             });
         });
-        
+       
         it('查询所有型号信息', done => {
             let option = {
                 url: url.resolve(baseUrl, "/api/models"),
@@ -302,7 +303,7 @@ describe('厂家功能操作', () => {
                 done();
             })
         });
-        
+       
         it('根据id查询型号信息', done => {
             let option = {
                 url: url.resolve(baseUrl, "/api/models/" + modelId),
@@ -407,4 +408,26 @@ describe('厂家功能操作', () => {
             });
         });
     });
+});
+
+//TODO 暂时,移植时可等导入设备后测试激活成功
+describe('设备', () => {
+    it('设备激活', done => {
+        var option = {
+            url: url.resolve(baseUrl, "/api/devices/exchange-id"),
+            body: {
+                macAddress: '00:88:65:39:8d:92',
+                nonce: '123'
+            },
+            json: true
+        };
+
+        request.post(option, (err, res, body) => {
+            expect(err).to.be.equal(null);
+            expect(res.statusCode).to.be.equal(200);
+            expect(body.code).to.be.equal(400);
+            expect(body.msg).to.be.equal('devices not found');
+            done();
+        });
+    })
 });
