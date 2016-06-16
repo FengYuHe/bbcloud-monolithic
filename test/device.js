@@ -162,89 +162,89 @@ describe('设备号导入功能',()=>{
       })
       describe('设备号导入',()=>{
 
-        it('管理员导入阿里云设备Id',done=>{
-          var formData ={
-            url:url.resolve(baseUrl,'/api/auth/devices/uploadAliIds'),
-            body:{
-              files:{
-                file:fs.createReadStream(__dirname+'/deviceData/aliid10.json'),
-              },
-              batchId:batchId
-            },
-            headers:{
-              'Authorization':Authorization + token
-            },
-            json:true
-          }
-          request.post(formData,function (err, httpResponse, body) {
-            if (body.code !== 200) {
-              console.log('err:',body.msg);
-            }
-            expect(body.code).to.be.equal(200);
-            done();
-          })
-        })
-        it('管理员导入微信设备Id',done=>{
-          var option ={
-            url:url.resolve(baseUrl,'/api/auth/devices/generateWechatDeviceIds'),
-            body:{
-              batchId:batchId
-            },
-            headers:{
-              'Authorization':Authorization + token
-            },
-            json:true
-          }
-          request.post(option,(err,res,body)=>{
-            if (body.code !== 200) {
-              console.log('err:',body.msg);
-            }
-            expect(body.code).to.be.equal(200);
-            done();
-          })
-        })
-        it('管理员导入mac Id',done=>{
-          var option ={
-            url:url.resolve(baseUrl,'/api/auth/devices/uploadMacIds'),
-            body:{
-              files:{
-                file:fs.createReadStream(__dirname+'/deviceData/macIds.xlsx'),
-              },
-              batchId:batchId
-            },
-            headers:{
-              'Authorization':Authorization + token
-            },
-            json:true
-          }
-          request.post(option,(err,res,body)=>{
-            if (body.code !== 200) {
-              console.log('info:',body.msg);
-            }
-            expect(body.code).to.be.equal(200);
-            done();
-          })
-        })
-        it('管理员作废批次',done=>{
-          var option ={
-            url:url.resolve(baseUrl,'/api/auth/batches/invalidateBatch'),
-            body:{
-              batchId:batchId
-            },
-            headers:{
-              'Authorization':Authorization + token
-            },
-            json:true
-          }
-          request.post(option,(err,res,body)=>{
-            if (body.code === 400) {
-              console.log('err:',body.msg);
-            }
-            expect(body.code).to.be.equal(400);
-            expect(body.msg).to.be.equal('batch is successful and can not be modified.');
-            done();
-          })
-        })
+        // it('管理员导入阿里云设备Id',done=>{
+        //   var formData ={
+        //     url:url.resolve(baseUrl,'/api/auth/devices/uploadAliIds'),
+        //     body:{
+        //       files:{
+        //         file:fs.createReadStream(__dirname+'/deviceData/aliid10.json'),
+        //       },
+        //       batchId:batchId
+        //     },
+        //     headers:{
+        //       'Authorization':Authorization + token
+        //     },
+        //     json:true
+        //   }
+        //   request.post(formData,function (err, httpResponse, body) {
+        //     if (body.code !== 200) {
+        //       console.log('err:',body.msg);
+        //     }
+        //     expect(body.code).to.be.equal(200);
+        //     done();
+        //   })
+        // })
+        // it('管理员导入微信设备Id',done=>{
+        //   var option ={
+        //     url:url.resolve(baseUrl,'/api/auth/devices/generateWechatDeviceIds'),
+        //     body:{
+        //       batchId:batchId
+        //     },
+        //     headers:{
+        //       'Authorization':Authorization + token
+        //     },
+        //     json:true
+        //   }
+        //   request.post(option,(err,res,body)=>{
+        //     if (body.code !== 200) {
+        //       console.log('err:',body.msg);
+        //     }
+        //     expect(body.code).to.be.equal(200);
+        //     done();
+        //   })
+        // })
+        // it('管理员导入mac Id',done=>{
+        //   var option ={
+        //     url:url.resolve(baseUrl,'/api/auth/devices/uploadMacIds'),
+        //     body:{
+        //       files:{
+        //         file:fs.createReadStream(__dirname+'/deviceData/macIds.xlsx'),
+        //       },
+        //       batchId:batchId
+        //     },
+        //     headers:{
+        //       'Authorization':Authorization + token
+        //     },
+        //     json:true
+        //   }
+        //   request.post(option,(err,res,body)=>{
+        //     if (body.code !== 200) {
+        //       console.log('info:',body.msg);
+        //     }
+        //     expect(body.code).to.be.equal(200);
+        //     done();
+        //   })
+        // })
+        // it('管理员作废批次',done=>{
+        //   var option ={
+        //     url:url.resolve(baseUrl,'/api/auth/batches/invalidateBatch'),
+        //     body:{
+        //       batchId:batchId
+        //     },
+        //     headers:{
+        //       'Authorization':Authorization + token
+        //     },
+        //     json:true
+        //   }
+        //   request.post(option,(err,res,body)=>{
+        //     if (body.code === 400) {
+        //       console.log('err:',body.msg);
+        //     }
+        //     expect(body.code).to.be.equal(400);
+        //     expect(body.msg).to.be.equal('batch is successful and can not be modified.');
+        //     done();
+        //   })
+        // })
       })
     })
   })

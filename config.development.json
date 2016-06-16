@@ -11,10 +11,10 @@
     "state": "state",
     "debug": false,
     "airkissKey": "airkisskey",
-    "token":"token",
-    "encodingAESKey":"'IJctKyqEyfTDbtB24ItwLYxd8ChfjAQGcUAmbwrLUad'"
+    "token": "token",
+    "encodingAESKey": "'IJctKyqEyfTDbtB24ItwLYxd8ChfjAQGcUAmbwrLUad'"
   },
-  "yunwang":{
+  "yunwang": {
     "appkey": "23382671",
     "appsecret": "14891ae2f39341dec73b28f1250910b0",
     "REST_URL": "http://gw.api.taobao.com/router/rest"

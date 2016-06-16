@@ -18,8 +18,8 @@ var adminApp = angular.module('adminControlPanel', [
   .controller('SignInController', SignInController)
   // .controller('UploadController', UploadController)
   .controller('ChangeOwnPwdController', ChangeOwnPwdController)
-  .controller('UserMenu', function ($scope, $auth, $http) {
-  $http.get("/api/auth/administrator-accounts/" + $auth.getPayload().sub).success(data => {
+  .controller('UserMenu', function($scope, $auth, $http) {
+    $http.get("/api/auth/administrator-accounts/" + $auth.getPayload().sub).success(data => {
       this.name = data.name;
     }).catch(data => {
       if (data.status === 401) {
@@ -28,40 +28,42 @@ var adminApp = angular.module('adminControlPanel', [
       this.name = "未知用户";
     });
   })
-  .directive('generateCloudId', ['$http', function ($http) {
-        return {
-            restrict: 'E',
-            scope: { batch: '&' },
-            template: '<a class="btn btn-default" ng-click="generateCloudId()">生成BBCloudId</a>',
-            link: function (scope) {
-                scope.generateCloudId = function () {
-                    $http.post('/api/auth/devices/generateBBCloudIds',{
-                      batchId:scope.batch().values.id
-                    }).success(function (data) {
-                      alert(data.msg)
-                    })
-                };
-            }
+  .directive('generateCloudId', ['$http', function($http) {
+    return {
+      restrict: 'E',
+      scope: {
+        batch: '&'
+      },
+      template: '<a class="btn btn-default" ng-click="generateCloudId()">生成BBCloudId</a>',
+      link: function(scope) {
+        scope.generateCloudId = function() {
+          $http.post('/api/auth/devices/generateBBCloudIds', {
+            batchId: scope.batch().values.id
+          }).success(function(data) {
+            alert(data.msg)
+          })
         };
-    }])
-  .directive('generateWechatId', ['$http', function ($http) {
-        return {
-            restrict: 'E',
-            scope: { batch: '&' },
-            template: '<a ng-disabled="isDisabled" class="btn btn-default" ng-click="generateWechatIds()">生成Wechat device Ids</a>',
-            link: function (scope) {
-                scope.isDisabled=isDisabledCheckByState('wechat',scope.batch.state);
-                scope.generateWechatIds = function () {
-                    if (scope.isDisabled) {
-                      return;
-                    }
-                    $http.post('/api/auth/devices/generateWechatDeviceIds',{
-                      batchId:scope.batch().values.id
-                    }).success(function (data) {
-                      alert(data.msg)
-                    })
-                };
-            }
+      }
+    };
+  }])
+  .directive('generateWechatId', ['$http', function($http) {
+    return {
+      restrict: 'E',
+      scope: {
+        batch: '&'
+      },
+      template: '<a ng-disabled="isDisabled" class="btn btn-default" ng-click="generateWechatIds()">生成Wechat device Ids</a>',
+      link: function(scope) {
+        scope.isDisabled = isDisabledCheckByState('wechat', scope.batch.state);
+        scope.generateWechatIds = function() {
+          if (scope.isDisabled) {
+            return;
+          }
+          $http.post('/api/auth/devices/generateWechatDeviceIds', {
+            batchId: scope.batch().values.id
+          }).success(function(data) {
+            alert(data.msg)
+          })
         };
       }
     };
@@ -91,43 +93,48 @@ var adminApp = angular.module('adminControlPanel', [
         scope.toUploadPage = function() {
           $location.path('/upload-macIds/' + scope.batch().values.id);
         };
-    }])
-  .directive('invalidateBatch', ['$location', function ($location) {
-        return {
-            restrict: 'E',
-            scope: { batch: '&' },
-            template: '<a ng-disabled="isDisabled" class="btn btn-default" ng-click="toUploadPage()">删除该批次</a>',
-            link: function (scope) {
-                scope.isDisabled=isDisabledCheckByState('invalidate',scope.batch.state);
-                scope.toUploadPage = function () {
-                    if (scope.isDisabled) {
-                      return;
-                    }
-                    $location.path('/delete-batch/'+scope.batch().values.id);
-                };
-            }
+      }
+    }
+  }])
+  .directive('invalidateBatch', ['$location', function($location) {
+    return {
+      restrict: 'E',
+      scope: {
+        batch: '&'
+      },
+      template: '<a ng-disabled="isDisabled" class="btn btn-default" ng-click="toUploadPage()">删除该批次</a>',
+      link: function(scope) {
+        scope.isDisabled = isDisabledCheckByState('invalidate', scope.batch.state);
+        scope.toUploadPage = function() {
+          if (scope.isDisabled) {
+            return;
+          }
+          $location.path('/delete-batch/' + scope.batch().values.id);
         };
-    }]);
-function isDisabledCheckByState(from,state) {
+      }
+    };
+  }]);
+
+function isDisabledCheckByState(from, state) {
   var isDisabled = true;
   switch (from) {
     case 'ali':
-      if (state==0 || state==2 || state==3) {
+      if (state == 0 || state == 2 || state == 3) {
         isDisabled = false;
       }
       break;
     case 'wechat':
-      if (state==2 || state==3) {
+      if (state == 2 || state == 3) {
         isDisabled = false;
       }
       break
     case 'mac':
-      if (state==3) {
+      if (state == 3) {
         isDisabled = false;
       }
       break
     case 'invalidate':
-      if (state==0 || state==2 || state==3) {
+      if (state == 0 || state == 2 || state == 3) {
         isDisabled = false;
       }
       break
@@ -141,8 +148,7 @@ function isDisabledCheckByState(from,state) {
 function adminControlPanelConfig(NgAdminConfigurationProvider) {
 
   var nga = NgAdminConfigurationProvider;
-  var admin = nga.application('BBCloud 后台管理')
-    .baseApiUrl('http://127.0.0.1:3000/api/auth/');
+  var admin = nga.application('BBCloud 后台管理').baseApiUrl('http://127.0.0.1:3000/api/auth/');
 
   admin.addEntity(nga.entity('administrator-accounts'));
   admin.addEntity(nga.entity('customer-accounts'));
@@ -172,7 +178,7 @@ function adminControlPanelConfig(NgAdminConfigurationProvider) {
 
 function authConfig($authProvider) {
   $authProvider.tokenPrefix = 'administrator';
-  $authProvider.baseUrl = '/administrator/';
+  $authProvider.baseUrl = '/api/administrator/';
 }
 
 function routeConfig($stateProvider) {
@@ -206,7 +212,10 @@ function routeConfig($stateProvider) {
       $scope.uploadAliIds = function(file) {
         file.upload = Upload.upload({
           url: '/api/auth/devices/uploadAliIds',
-          data: {batchId:$stateParams.id, file: file},
+          data: {
+            batchId: $stateParams.id,
+            file: file
+          },
         });
 
         file.upload.then(function(response) {
@@ -231,7 +240,10 @@ function routeConfig($stateProvider) {
       $scope.uploadMacIds = function(file) {
         file.upload = Upload.upload({
           url: '/api/auth/devices/uploadMacIds',
-          data: {batchId:$stateParams.id, file: file},
+          data: {
+            batchId: $stateParams.id,
+            file: file
+          },
         });
 
         file.upload.then(function(response) {
@@ -252,14 +264,14 @@ function routeConfig($stateProvider) {
     parent: 'main',
     url: '/delete-batch/:id',
     templateUrl: 'views/delete-batch.html',
-    controller: function ($scope, $stateParams, $http) {
+    controller: function($scope, $stateParams, $http) {
       $scope.invalidateBatch = function() {
-          $http.post('/api/auth/devices/invalidateBatch',{
-            batchId:$stateParams.id,
-            reason:$scope.reason
-          }).success(function (data) {
-            alert(data.msg)
-          })
+        $http.post('/api/auth/devices/invalidateBatch', {
+          batchId: $stateParams.id,
+          reason: $scope.reason
+        }).success(function(data) {
+          alert(data.msg)
+        })
       }
     }
   });
@@ -304,7 +316,7 @@ function permissionDenyRedirect(Restangular, $state) {
 function SignInController($auth, $location, notification) {
   var signInRedirectTo = LOGIN_REDIRECT_TO;
   this.signIn = function(credentials) {
-    $auth.setStorageType('sessionStorage');
+    // $auth.setStorageType('sessionStorage');
     $auth.login(credentials)
       .then(function() {
         $location.path(signInRedirectTo);
@@ -347,7 +359,7 @@ function ChangeOwnPwdController($scope, $http, notification, $auth, $location) {
         addnCls: 'humane-flatty-error'
       });
     } else {
-      $http.post("/auth/administrator/changeOwnPwd", {
+      $http.post("/api/auth/administrator-accounts/changeOwnPwd", {
         oldPassword: pwd.oldPassword,
         newPassword: pwd.newPassword
       }).success((reply) => {
@@ -382,7 +394,7 @@ adminApp.directive('changePwd', function(Restangular, $state, notification, $htt
       scope.changePWDBtn = function() {
         $(".modal", element).modal('hide');
         if (scope.password == scope.confirm) {
-          $http.post("/auth/administrator/changePwd", {
+          $http.post("/api/auth/administrator-accounts/changePwd", {
             password: scope.password,
             id: scope.id
           }).success(function(data) {

@@ -20,7 +20,7 @@ var adminApp = angular.module('adminControlPanel', [
   .controller('ResetPwdController', ResetPwdController)
   .controller('SetPwdController', SetPwdController)
   .controller('UserMenu', function($scope, $auth, $http) {
-    $http.get("/api/manufacturer-accounts/" + $auth.getPayload().sub).success(data => {
+    $http.get("/api/auth/manufacturer-accounts/" + $auth.getPayload().sub).success(data => {
       this.name = data.email;
     }).catch(data => {
       this.name = "未知用户";
@@ -30,7 +30,7 @@ var adminApp = angular.module('adminControlPanel', [
 function manufacturerControlPanelConfig(NgAdminConfigurationProvider) {
 
   var nga = NgAdminConfigurationProvider;
-  var admin = nga.application('我是厂商').baseApiUrl('/api/');
+  var admin = nga.application('我是厂商').baseApiUrl('http://127.0.0.1:3000/api/auth/');
 
   admin.addEntity(nga.entity('batches'));
   admin.addEntity(nga.entity('models'));
@@ -49,7 +49,7 @@ function manufacturerControlPanelConfig(NgAdminConfigurationProvider) {
 
 function authConfig($authProvider) {
   $authProvider.tokenPrefix = 'manufacturer';
-  $authProvider.baseUrl = '/manufacturer/';
+  $authProvider.baseUrl = '/api/manufacturer/';
 }
 
 function routeConfig($stateProvider) {
@@ -136,7 +136,7 @@ function AuthController($auth, $location, notification) {
   var loginRedirectTo = LOGIN_REDIRECT_TO;
 
   this.login = function(credentials) {
-    $auth.setStorageType('sessionStorage');
+    // $auth.setStorageType('sessionStorage');
     $auth.login(credentials)
       .then(function() {
         $location.path(loginRedirectTo);
@@ -162,12 +162,12 @@ function ManufacturerController($http, $auth, $location) {
 
   var self = this;
 
-  $http.get('/api/manufacturers').success(function(result) {
+  $http.get('/api/auth/manufacturers').success(function(result) {
     self.manufacturers = result;
   });
 
   this.select = function(id) {
-    $http.get('/manufacturer/' + id + '/select').success(function(result) {
+    $http.get('/api/auth/manufacturer/' + id + '/select').success(function(result) {
       $auth.setToken(result.token);
       $location.path(LOGIN_REDIRECT_TO);
     }).error(function() {
@@ -176,7 +176,7 @@ function ManufacturerController($http, $auth, $location) {
   };
 
   this.createNewManufacturer = function(entity) {
-    $http.post('/api/manufacturers', entity).success(function() {
+    $http.post('/api/auth/manufacturers', entity).success(function() {
       alert('成功');
     }).error(function() {
       alert('失败');
@@ -184,7 +184,7 @@ function ManufacturerController($http, $auth, $location) {
   };
 
   this.authManufacturer = function(entity) {
-    $http.post('/auth/manufacturer/auth', entity).success(function() {
+    $http.post('api/auth/manufacturer/auth', entity).success(function() {
       alert('成功');
     }).error(function() {
       alert('失败');
@@ -210,7 +210,7 @@ function ChangeOwnPwdController($scope, $http, notification, $auth, $location) {
         addnCls: 'humane-flatty-error'
       });
     } else {
-      $http.post("/auth/manufacturer/changeOwnPwd", {
+      $http.post("/api/auth/manufacturer/changeOwnPwd", {
         oldPassword: pwd.oldPassword,
         newPassword: pwd.newPassword
       }).success((reply) => {
@@ -232,7 +232,7 @@ function ChangeOwnPwdController($scope, $http, notification, $auth, $location) {
 
 function ResetPwdController($scope, $http, notification) {
   this.resetPwd = function(email) {
-    $http.post('/auth/manufacturer/resetPwd', {
+    $http.post('/api/manufacturer/resetPwd', {
       email
     }).success((data) => {
       if (data.code == 200) {
@@ -257,11 +257,11 @@ function SetPwdController($scope, $http, notification, $location, $state) {
         addnCls: 'humane-flatty-error'
       });
     } else {
-      $http.post('/auth/manufacturer/setPwd', {
+      $http.post('/api/manufacturer/setPwd', {
         token,
         password: credentials.password
       }).success(function(data) {
-        if (data.cod额 == 200) {
+        if (data.code == 200) {
           $state.go(LOGIN_STATE_NAME)
         } else {
           notification.log(data.msg, {

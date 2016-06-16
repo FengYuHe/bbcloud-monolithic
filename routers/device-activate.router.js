@@ -1,6 +1,6 @@
-var router = require('express').Router();
+const router = require('.').router;
 var deviceService = require('../services/device-service');
 
-router.use('/api/devices/exchange-id', deviceService.getDeviceInfo);
+router.use('/devices/exchange-id', deviceService.getDeviceInfo);
 
 module.exports = router;
