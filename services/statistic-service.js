@@ -22,5 +22,5 @@ exports.analytics = function(req, res){
         var entity = new Analytic(event);
         entity.save();
     });
-    res.json({code: 200, msg: msg});
+    res.json(msg);
 };
