@@ -30,8 +30,16 @@ module.exports = function(resource, model) {
     } catch (err) {}
     try {
       filters = JSON.parse(req.query._filters)
-    } catch (err) {}
-
+      for (let k in filters) {
+        if (typeof k === 'string' && filters[k].length !== 24) {
+          filters[k] = new RegExp(filters[k]);//模糊查询参数
+        }
+      }
+    } catch (err) {
+      console.log('err:');
+      console.log(err);
+      filters = {}
+    }
     Promise.all([
       Model.count(filters),
       Model.find(filters).limit(limit).skip(skip).sort(sort)

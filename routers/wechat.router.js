@@ -1,81 +1,72 @@
 var nconf = require('nconf');
-var router = require('express').Router();
-var WeChatAPI = require('wechat-api');
+var router = require('.').router;
+var commonRouter = require('.').commonRouter;
 var passport = require('passport');
+var WeChat = require('wechat');
+var WechatService = require('../services/account/customer-service');
+var weService = require('../services/wechat-service.js');
+var storyService = require('../services/wechat/story-service')
+var emojiService = require('../services/wechat/emoji-service');
+var habitPlanService = require('../services/wechat/habit-plan-service');
 
-var noSession = {session: false};
-
-var defaultMenu = {
-  "button": [
-    {
-      "type": "view",
-      "name": "配网",
-      "key": "http://192.168.0.2:3000/network-configure"
-    }
-  ]
+var config = {
+  token: nconf.get('wechat:token'),
+  appid: nconf.get('wechat:appId'),
+  appsecret: nconf.get('wechat:appSerect'),
+  encodingAESKey: nconf.get('wechat:encodingAESKey')
 };
-
-var wechat = new WeChatAPI(nconf.get('wechat:appId'), nconf.get('wechat:appSecret'));
+var ws = new WechatService();
 
 // airkiss
-router.get('/wechat/network-configure', networkConfigure);
-router.get('/wechat/', admin);
-router.post('/wechat/action/create-menu', createMenu);
-router.get('/wechat/authToken',authToken);
+commonRouter.get('/wechat/getJsApiConfig', weService.getJsConfig);   //获取微信H5 jsApi 相关配置
 
-// wechat login
-router.post('/customer/auth/wechat/authenticate', passport.authenticate('wechat', noSession), wechatLoginCallback);
-router.get('/customer/auth/wechat/callback', wechatLoginCallback);
 
-function authToken(req,res) {
-  res.send(req.query.echostr);
-}
-function wechatLoginIssueToken(req, res, next) {
-}
 
-function wechatLoginCallback(req, res, next) {
-  var theDeviceId = req.query.state;
-  var code = req.query.code;
-  client.getAccessToken(code, function (err, result) {
-    var accessToken = result.data.access_token;
-    var openid = result.data.openid;
-    console.log('err:',err);
-    console.log('result:',result);
-    console.log('openid:',openid);
-    console.log('theDeviceId:',theDeviceId);
-    res.send(theDeviceId+'|||'+openid+'==='+accessToken)
+
+//微信app TODO 加token验证
+commonRouter.get('/wx/createMenu',ws.createMenu);
+commonRouter.get('/wx/login',ws.requestWechatLogin);
+commonRouter.get('/wx/jsapi',ws.wechatJsApiSign);
+commonRouter.get('/wx/wechatCallback',ws.wechatCallback,ws.checkAccount,ws.getToken);
+commonRouter.get('/wx/pushStory',storyService.pushStory);
+
+//表情包
+commonRouter.get('/wechat/emoji', emojiService.getEmoji); //获取表情包
+commonRouter.post('/wechat/emoji/dibble', emojiService.emojiDibble); //点播表情包
+
+//习惯养成
+commonRouter.get('/wechat/habitPlan', habitPlanService.getHabitPlan); //获取习惯列表
+commonRouter.post('/wechat/habitPlan', habitPlanService.createHabitPlan); //创建习惯
+commonRouter.delete('/wechat/habitPlan', habitPlanService.deleteHabitPlan); //删除习惯
+
+commonRouter.get('/wechat/getDevice', weService.getOpenId, weService.Devices);  //微信H5获取用户绑定设备
+commonRouter.get('/wechat/unbindDevice', weService.unbindDevice); //微信H5页面解绑
+
+//social
+router.get('/wechat/inviteFamilyMember', weService.getOpenId, weService.invteFamilyMember);//邀请家人
+router.get('/wechat/exitGroup',  weService.getOpenId, weService.exitGroup);//退出家庭圈
+router.get('/wechat/showFamilyMembers', weService.getOpenId, weService.showFamilyMembers);//查看家庭列表
+router.get('/wechat/changeNickName', weService.getOpenId, weService.changeNickName);//修改家庭昵称
+router.get('/wechat/showDeviceQRcode', weService.getOpenId, weService.showDeviceQRcode);//设备二维码页面
+router.get('/wechat/removeDeviceFriends', weService.getOpenId, weService.removeDeviceFriends);//删除好友
+router.get('/wechat/addDeviceFriends', weService.getOpenId, weService.addDeviceFriends);//添加好友
+router.get('/wechat/confirmDeviceFriends', weService.getOpenId, weService.confirmDeviceFriends);//确认添加好友
+router.get('/wechat/changeFriendNickName', weService.getOpenId, weService.changeFriendNickName);//修改好友昵称
+router.get('/wechat/showDeviceFriends', weService.getOpenId, weService.showDeviceFriends);//设备好友列表
+router.get('/wechat/changeDeviceName', weService.getOpenId, weService.changeDeviceName);//修改设备名称
+
+
+//voice
+var voiceChat = require('../services/voice-chat/voice-chat');
+
+router.use('/wechat', WeChat(config).voice(function(msg, req, res) {
+  res.send('');
+  voiceChat.setReceiver('wx');
+  return voiceChat.listenGroup(msg, (err, res) => {
+    console.log(err, res);
   });
-}
+}).middlewarify());
 
-function getFullUrl(req) {
-  return req.protocol + '://' + req.get('Host') + req.url;
-}
 
-function networkConfigure(req, res, next) {
-  var debug = nconf.get('wechat:debug');
-  var url = getFullUrl(req);
-  var jsApiList = ['configWXDeviceWiFi'];
-  var key = nconf.get('airkiss:key');
-
-  return wechat.getJsConfig({debug, jsApiList, url, beta: true}, function(err, wechatConfig) {
-    if (err) return next(err);
-    res.render('network-configure', {wechatConfig, key});
-  });
-}
-
-function admin(req, res, next) {
-  return wechat.getMenu(function(err, menu) {
-    if (err) return res.render('admin', {menu: defaultMenu});
-    res.render('admin', {menu: menu.menu});
-  });
-}
-
-function createMenu(req, res, next) {
-  var menu = req.body.menu;
-  return wechat.createMenu(menu, function(err) {
-    if (err) return next(err);
-    res.redirect('back');
-  });
-}
-
-module.exports = router;
+// message
+router.use('/wechat', WeChat(config, weService.message));

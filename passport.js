@@ -1,8 +1,10 @@
-var nconf = require('nconf');
-var passport = require('passport');
-var WeChatStrategy = require('passport-wechat');
-var JwtStrategy = require('passport-jwt').Strategy;
-var ExtractJwt = require('passport-jwt').ExtractJwt;
+'use strict';
+const nconf = require('nconf');
+const passport = require('passport');
+const mongoose = require('mongoose');
+const WeChatStrategy = require('passport-wechat');
+const JwtStrategy = require('passport-jwt').Strategy;
+const ExtractJwt = require('passport-jwt').ExtractJwt;
 
 var CustomerAccount = require('./models/customer-account');
 var AdministratorAccount = require('./models/administrator-account');
@@ -43,5 +45,24 @@ function wechatVerify(accessToken, refreshToken, profile, done) {
 }
 
 function jwtVerify(payload, done) {
-  done(null, payload);
+  isRevoked(payload, function(err) {
+    done(err, payload);
+  });
+}
+
+function isRevoked(payload, done) {
+  console.log(payload);
+  let jti = payload.jti;
+  let RevokeToken = mongoose.model('RevokeToken');
+  if (!!!jti) {
+    return done("Invalid token due to jwt has no jti.");
+  } else {
+    RevokeToken.findById(jti, (err, doc) => {
+      if (err || !!!doc || !doc.active) {
+        return done("Revoked Token.");
+      } else {
+        return done();
+      }
+    });
+  }
 }

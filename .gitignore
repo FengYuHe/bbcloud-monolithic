@@ -4,3 +4,6 @@ bower_components/
 mochawesome-reports/
 .DS_Store
 .idea
+bbcloud-monolithic.iml
+resource/
+public/wx/

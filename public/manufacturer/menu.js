@@ -12,7 +12,7 @@ function menuConfig(nga, admin) {
     )
     .addChild(nga.menu()
       .title('认证')
-      .icon('<i class="fa fa-mobile fa-fw"></i>')
+      .icon('<span class="fa fa-scissors fa-fw"></span>')
       .link('/auth-manufacturer')
     );
 }

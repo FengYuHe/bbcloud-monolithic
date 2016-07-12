@@ -1,18 +1,19 @@
 {
   "port": 3000,
-  "mongodb": "mongodb://127.0.0.1/",
+  "mongodb": "mongodb://127.0.0.1/test",
   "secret": "secret",
   "tokenExpiresIn": "1h",
   "wechat": {
-    "appId": "wx2d207d449dc6204a",
-    "appSecret": "d4624c36b6795d1d99dcf0547af5443d",
+    "appId": "wx51d16f6abd2213b5",
+    "appSecret": "7de99acb9201a8c34326c636d3ddbcb3",
     "callbackUrl": "callbackurl",
     "scope": "snapi_userinfo",
     "state": "state",
     "debug": false,
     "airkissKey": "airkisskey",
-    "token": "token",
-    "encodingAESKey": "'IJctKyqEyfTDbtB24ItwLYxd8ChfjAQGcUAmbwrLUad'"
+    "token":"bbcloudtoken123",
+    "encodingAESKey":"6nQKlixo3nEAYXeELoeNefAplRXPa4XwDCG28xVbAMh",
+    "baseUrl":"http://120.24.230.248"
   },
   "yunwang": {
     "appkey": "23382671",
@@ -29,5 +30,19 @@
     }
   },
   "mailFrom": "i@tosiney.com",
-  "sendMailDelay": 60
+  "sendMailDelay": 60,
+  "voiceProvider":{
+    "tts-s":{
+      "serviceName":"tts-华南",
+      "providers":["科大讯飞TTS","微软TTS"]
+    },
+    "tts-n":{
+      "serviceName":"tts-华北",
+      "providers":["科大讯飞TTS"]
+    },
+    "stt-n":{
+      "serviceName":"stt-华北",
+      "providers":["科大讯飞STT"]
+    }
+  }
 }

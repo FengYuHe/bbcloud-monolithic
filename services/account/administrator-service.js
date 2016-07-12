@@ -1,6 +1,8 @@
 'use strict';
 const AuthService = require('./base/auth-service');
 const mongoose = require('mongoose');
+const Manufacturer = require('../../models/manufacturer');
+const ManufacturerAccount = require('../../models/manufacturer-account');
 const passport = require('passport');
 const co = require('co');
 
@@ -182,4 +184,63 @@ module.exports = class AdministratorService extends AuthService {
       });
     };
   }
+
+  //检查权限
+  checkOperateScope(operateModel,operateType){
+    var that = this;
+    return function (req,res,next) {
+      if (req.user.realm === 'administrator') {
+        if (that.checkScope(req.user.scope, operateModel+':'+operateType)) {
+          return res.sendStatus(403);
+        }else{
+          next();
+        }
+      }else {
+        return next({code:403,msg:'no auth to operate'})
+      }
+    }
+  }
+
+  checkScope(scope, permission) {
+    scope = scope || [];
+    return scope.indexOf(permission) === -1;
+  }
+
+  //认证厂家
+  authManufacturer(req,res,next){
+    Manufacturer.findByIdAndUpdate(req.body.id,req.body).then(function (entity) {
+      if (!entity) {
+        return next({code:400,err:'manufacturer not found'})
+      }
+      let o = entity.toObject();
+      o.id = o._id.toString();
+      delete o._id;
+      res.json(o);
+    }).catch((e)=>{
+      next({code:400,err:e});
+    })
+  }
+
+  //认证厂家账号
+  authManufacturerAccount(req,res,next){
+    ManufacturerAccount.findByIdAndUpdate(req.body.id,req.body).then(function (entity) {
+      if (!entity) {
+        return next({code:400,err:'manufacturerAccount not found'})
+      }
+      let o = entity.toObject();
+      o.id = o._id.toString();
+      delete o._id;
+      res.json(o);
+    }).catch((e)=>{
+      next({code:400,err:e});
+    })
+  }
+
+  filterManufacturerStatus(req,res,next){
+    if (req.user.realm !== 'administrator' && req.body.status) {
+      delete req.body.status
+    }
+    next()
+  }
+
 }

@@ -14,11 +14,11 @@ function batchConfig(nga, admin) {
       nga.field('model', 'reference').label('型号')
         .targetEntity(model)
         .targetField(nga.field('name')),
-      nga.field('amount', 'number').label('数量'),
+      nga.field('quantity', 'number').label('数量'),
       nga.field('createdAt').label('下单日期'),
-      nga.field('state').label('状态').map((state)=>{
+      nga.field('status').label('状态').map((status)=>{
         var label = '';
-        switch (state) {
+        switch (status) {
           case -1:
             label = '已作废'
             break;
@@ -32,10 +32,10 @@ function batchConfig(nga, admin) {
             label = '已完成阿里设备Id的上传'
             break;
           case 3:
-            label = '已导入微信设备Id'
+            label = '已完成设备macId的上传'
             break;
           case 4:
-            label = '已完成'
+            label = '已导入微信设备Id'
             break;
           default:
             label = 'N/A'
@@ -52,10 +52,8 @@ function batchConfig(nga, admin) {
       nga.field('model', 'reference').label('型号')
         .targetEntity(model)
         .targetField(nga.field('name')),
-      nga.field('amount', 'number').label('数量'),
+      nga.field('quantity', 'number').label('数量'),
       nga.field('createdAt').label('下单日期'),
-      nga.field('custom_action0').label('')
-                    .template('<generate-cloud-id batch="entry"></generate-cloud-id>'),
       nga.field('custom_action1').label('')
                     .template('<upload-ali-ids batch="entry"></upload-ali-ids>'),
       nga.field('custom_action2').label('')
@@ -63,7 +61,7 @@ function batchConfig(nga, admin) {
       nga.field('custom_action3').label('')
                     .template('<upload-mac-ids batch="entry"></upload-mac-ids>'),
       nga.field('invalidateBatch').label('')
-                    .template('<delete-batch batch="entry"></delete-batch>'),
+                    .template('<invalidate-batch batch="entry"></invalidate-batch>'),
     ]);
 
 }

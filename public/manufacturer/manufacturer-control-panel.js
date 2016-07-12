@@ -9,8 +9,11 @@ var LOGOUT_REDIRECT_TO = '/login';
 
 var adminApp = angular.module('adminControlPanel', [
     'ng-admin',
-    'satellizer'
+    'satellizer',
+    'ngFileUpload'
   ]).config(manufacturerControlPanelConfig)
+    // .config(requestInterception)
+    .config(['RestangularProvider', responseInterception])
   .config(routeConfig)
   .config(authConfig)
   .run(anonymousRedirect)
@@ -30,7 +33,7 @@ var adminApp = angular.module('adminControlPanel', [
 function manufacturerControlPanelConfig(NgAdminConfigurationProvider) {
 
   var nga = NgAdminConfigurationProvider;
-  var admin = nga.application('我是厂商').baseApiUrl('http://127.0.0.1:3000/api/auth/');
+  var admin = nga.application('我是厂商').baseApiUrl('/api/auth/');
 
   admin.addEntity(nga.entity('batches'));
   admin.addEntity(nga.entity('models'));
@@ -50,6 +53,7 @@ function manufacturerControlPanelConfig(NgAdminConfigurationProvider) {
 function authConfig($authProvider) {
   $authProvider.tokenPrefix = 'manufacturer';
   $authProvider.baseUrl = '/api/manufacturer/';
+  $authProvider.storageType = 'sessionStorage';
 }
 
 function routeConfig($stateProvider) {
@@ -61,10 +65,13 @@ function routeConfig($stateProvider) {
   var setPwdStateName = SETPWD_STATE_NAME;
 
   $stateProvider.state("changePwd", {
+      parent: 'main',
       url: '/change-password',
       templateUrl: 'views/change-password.html'
-    })
-    .state("auth", {
+    });
+
+  $stateProvider.state("auth", {
+      parent: 'main',
       url: '/auth-manufacturer',
       templateUrl: 'views/auth-manufacturer.html',
       controller: 'ManufacturerController',
@@ -136,7 +143,6 @@ function AuthController($auth, $location, notification) {
   var loginRedirectTo = LOGIN_REDIRECT_TO;
 
   this.login = function(credentials) {
-    // $auth.setStorageType('sessionStorage');
     $auth.login(credentials)
       .then(function() {
         $location.path(loginRedirectTo);
@@ -158,9 +164,16 @@ function AuthController($auth, $location, notification) {
   };
 }
 
-function ManufacturerController($http, $auth, $location) {
+function ManufacturerController($http, $auth, $location, Upload, $timeout) {
 
   var self = this;
+
+  $http.get("/api/auth/manufacturer-accounts/" + $auth.getPayload().sub).success(data => {
+    if(data.status === 1){
+      alert('账号已认证!');
+      $location.path(LOGIN_REDIRECT_TO);
+    }
+  });
 
   $http.get('/api/auth/manufacturers').success(function(result) {
     self.manufacturers = result;
@@ -184,10 +197,24 @@ function ManufacturerController($http, $auth, $location) {
   };
 
   this.authManufacturer = function(entity) {
-    $http.post('api/auth/manufacturer/auth', entity).success(function() {
-      alert('成功');
-    }).error(function() {
-      alert('失败');
+    entity.file.load = Upload.upload({
+      url: '/upload/image',
+      data: entity
+    }).then(function (response) {
+      $timeout(function () {
+        entity.businessLicenseUrl = response.data.url;
+        delete entity.file;
+        $http.post('/api/auth/manufacturer/auth', entity).success(function() {
+          alert('认证已提交,请等待审核');
+          $auth.logout();
+          $location.path(LOGOUT_REDIRECT_TO);
+        }).error(function() {
+          alert('认证失败');
+        });
+      });
+    }, function (response) {
+      if (response.status > 0)
+        $scope.errorMsg = response.status + ': ' + response.data;
     });
   };
 
@@ -271,4 +298,28 @@ function SetPwdController($scope, $http, notification, $location, $state) {
       });
     }
   }
+}
+
+// function requestInterception(RestangularProvider){
+//   RestangularProvider.addFullRequestInterceptor(function(element, operation, what, url, headers, params, httpConfig) {
+//     console.log(element);
+//     console.log(operation);
+//     console.log(what);
+//     console.log(url);
+//     console.log(headers);
+//     console.log(params);
+//     console.log(httpConfig);
+//   });
+// }
+
+function responseInterception(RestangularProvider){
+  RestangularProvider.addResponseInterceptor(function(data, operation, what, url, response) {
+    if(data.code === 401){
+      alert('账号未认证,请先认证!');
+      // $location.path(LOGIN_REDIRECT_TO);
+      window.location.replace('/manufacturer');
+      return null;
+    }
+    return data;
+  });
 }

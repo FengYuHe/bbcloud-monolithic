@@ -44,7 +44,6 @@ describe('管理员账户测试', () => {
           Authorization: Authorization + token
         }
       }, (err, res, body) => {
-        console.log(body);
         roleId = _.head(JSON.parse(body)).role;
         _url = baseAuthPrefix + `/roles/${roleId}`;
 
@@ -75,9 +74,11 @@ describe('管理员账户测试', () => {
           Authorization: Authorization + token
         },
       }, (err, res, body) => {
+        body = JSON.parse(body);
         expect(err).to.be.equal(null);
         expect(res.statusCode).to.be.equal(401);
-        expect(body.indexOf('UnauthorizedError')).to.be.equal(0);
+        expect(body.code).to.be.equal(401);
+        expect(body.msg).to.be.equal('Revoked Token');
         done();
       });
     });

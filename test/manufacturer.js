@@ -1,8 +1,11 @@
 'use strict';
+require('../nconf');
+require('../mongoose');
 const request = require('request');
 const expect = require('chai').expect;
 const url = require('url');
 const _ = require('lodash');
+const mongoose = require('mongoose');
 
 const baseUrl = 'http://127.0.0.1:3000';
 const baseAuthPrefix = baseUrl + '/api/auth';
@@ -207,12 +210,13 @@ describe('厂家功能操作', () => {
       request.post(option, (err, res, body) => {
         expect(err).to.be.equal(null);
         expect(res.statusCode).to.be.equal(200);
-        expect(body.message).to.be.equal('Model validation failed');
+        expect(body.msg).to.be.equal('ManufacturerAccount not authenticate');
         done();
       });
     });
 
     it('厂家认证', done => {
+      let accountModel = mongoose.model('ManufacturerAccount');
       let option = {
         url: url.resolve(baseUrl, "api/auth/manufacturer/auth"),
         headers: {
@@ -231,7 +235,12 @@ describe('厂家功能操作', () => {
         expect(res.statusCode).to.be.equal(200);
         expect(body).to.be.a('Object');
         expect(body.email).to.be.equal(email);
-        done();
+        accountModel.findOne({email: email}, (err, account) => {
+          account.status = 1;
+          account.save().then(function(){
+            done();
+          });
+        });
       });
     });
 
@@ -358,7 +367,7 @@ describe('厂家功能操作', () => {
         },
         body: {
           model: modelId,
-          amount: batcheNum
+          quantity: batcheNum
         },
         json: true
       };
@@ -370,7 +379,7 @@ describe('厂家功能操作', () => {
         expect(res.statusCode).to.be.equal(200);
         expect(body).to.be.a('Object');
         expect(body.model).to.be.equal(modelId);
-        expect(body.amount).to.be.equal(batcheNum);
+        expect(body.quantity).to.be.equal(batcheNum);
         done();
       });
     });
@@ -408,119 +417,9 @@ describe('厂家功能操作', () => {
         expect(res.statusCode).to.be.equal(200);
         expect(body).to.be.a('Object');
         expect(body.model).to.be.equal(modelId);
-        expect(body.amount).to.be.equal(batcheNum);
+        expect(body.quantity).to.be.equal(batcheNum);
         done();
       });
     });
   });
-});
-
-//TODO 暂时,移植时可等导入设备后测试激活成功
-describe('设备激活', () => {
-    it('健康检查', done => {
-        let option = {
-            url: url.resolve(baseUrl, "/api/health-check"),
-            json: true
-        };
-
-        request.get(option, (err, res, body) => {
-            expect(err).to.be.equal(null);
-            expect(res.statusCode).to.be.equal(200);
-            expect(body.msg).to.be.equal('ok');
-            done();
-        });
-    });
-    
-    it('交换信息失败', done => {
-        let option = {
-            url: url.resolve(baseUrl, "/api/devices/exchange-id"),
-            body: {
-                macAddress: '00:88:65:39:8d:92',
-                nonce: '123'
-            },
-            json: true
-        };
-
-        request.post(option, (err, res, body) => {
-            expect(err).to.be.equal(null);
-            expect(res.statusCode).to.be.equal(200);
-            expect(body.code).to.be.equal(400);
-            expect(body.msg).to.be.equal('devices not found');
-            done();
-        });
-    });
-
-    it('交换信息成功', done => {
-        let option = {
-            url: url.resolve(baseUrl, "/api/devices/exchange-id"),
-            body: {
-                macAddress: 'MacId001',
-                nonce: '123'
-            },
-            json: true
-        };
-
-        request.post(option, (err, res, body) => {
-            expect(err).to.be.equal(null);
-            expect(res.statusCode).to.be.equal(200);
-            expect(_.has(body, 'bbcloudDeviceId')).to.be.true;
-            done();
-        });
-    });
-
-    it('上报激活事件失败', done => {
-        let option = {
-            url: url.resolve(baseUrl, "/api/analytics"),
-            body:{
-                    "eventId": 'eventId001',
-                    "event": 'device-activated',
-                    "data": {
-                        "macAddress": "00:88:65:39:8d:92",
-                        "activatedAt": "1464947524"
-                    }
-                },
-            json: true
-        };
-
-        request.post(option, (err, res, body) => {
-            expect(err).to.be.equal(null);
-            expect(res.statusCode).to.be.equal(200);
-            expect(body.code).to.be.equal(500);
-            expect(body.msg).to.be.equal('request fail');
-            done();
-        });
-    });
-
-    it('上报激活事件成功', done => {
-        let option = {
-            url: url.resolve(baseUrl, "/api/analytics"),
-            body:[
-                {
-                    "eventId": 'eventId001',
-                    "event": 'device-activated',
-                    "data": {
-                        "macAddress": "00:88:65:39:8d:92",
-                        "activatedAt": "1464947524"
-                    }
-                },
-                {
-                    "eventId": 'eventId002',
-                    "event": 'device-activated',
-                    "data": {
-                        "macAddress": "40:8d:5c:a9:1a:f5",
-                        "activatedAt": "1465325151"
-                    }
-                }
-            ],
-            json: true
-        };
-
-        request.post(option, (err, res, body) => {
-            expect(err).to.be.equal(null);
-            expect(res.statusCode).to.be.equal(200);
-            expect(body).to.be.a('Array');
-            expect(body[0]).to.be.equal('eventId001');
-            done();
-        });
-    });
 });

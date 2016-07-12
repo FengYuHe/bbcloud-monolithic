@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const moment = require('moment');
 const nconf = require('nconf');
 const co = require('co');
+const _ = require('lodash');
 
 module.exports = class ManufacturerService extends AuthService {
 
@@ -22,20 +23,24 @@ module.exports = class ManufacturerService extends AuthService {
 
   createTokenExtras(user, done) {
     this.model.findById(user.id).then(function(manufacturerAccount) {
-      var manufacturer;
+      var manufacturer, status;
       try {
-        manufacturer = manufacturerAccount.manufacturer.toString()
+        manufacturer = manufacturerAccount.manufacturer.toString();
+        status = manufacturerAccount.status.toString() || 0;
       } catch (err) {}
       done(null, {
-        manufacturer
+        manufacturer,
+        status
       });
     }).catch(done);
   }
 
   getModelDataFromRequest(body) {
     var email = body.email;
+    var status = body.status || 0;
     return {
-      email
+      email,
+      status
     };
   }
 
@@ -43,26 +48,39 @@ module.exports = class ManufacturerService extends AuthService {
     let id = req.user.sub;
     console.log('body:', req.body);
     let manufacturerModel = mongoose.model('Manufacturer');
-    let entity = manufacturerModel(req.body);
+    let where = {
+      name: req.body.name,
+      code: req.body.code
+    };
     let accountModel = mongoose.model('ManufacturerAccount');
-    entity.save().then(function() {
-      //update account
-      accountModel.findByIdAndUpdate(id, {
-        manufacturer: entity._id
-      }).then(function(account) {
-        if (!account) throw new Error('not fount');
-        var o = account.toObject();
-        o.id = o._id.toString();
-        delete o._id;
-        res.json(o)
+    manufacturerModel.findOne(where).then(function(item){
+      if(item){
+        var entity = _.defaults(req.body, item);
+      }else{
+        req.body.status = 0;
+        var entity = manufacturerModel(req.body);
+      }
+      entity.save().then(function() {
+        req.user.manufacturer = req.user.manufacturer || entity._id;
+        //update account
+        accountModel.findByIdAndUpdate(id, {
+          manufacturer: entity._id
+          // status: 1
+        }).then(function(account) {
+          if (!account) throw new Error('not fount');
+          var o = account.toObject();
+          o.id = o._id.toString();
+          delete o._id;
+          res.json(o)
+        }).catch(function(e) {
+          console.log('update account error :', e);
+        });
       }).catch(function(e) {
-        console.log('update account error :', e);
-      });
-    }).catch(function(e) {
-      console.log(e);
-      res.json({
-        code: 500,
-        msg: 'save error'
+        console.log(e);
+        res.json({
+          code: 500,
+          msg: 'save error'
+        });
       });
     });
   }
