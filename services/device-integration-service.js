@@ -59,7 +59,7 @@ exports.getDeviceAppConfiguration = function (req, res) {
     var key = req.query.key;
     var params = req.params;
     if(Array.isArray(key) && key.length !== 0){
-        DeviceAppConfiguration.find({"macAddress": params.macAddress, "key": {"$in": key}}).then(function(result){
+        DeviceAppConfiguration.find({"macAddress": params.macAddress, "key": {"$in": key}}, '-_id key value').then(function(result){
             if(result.length === key.length){
                 debug('get the device app configuration success');
                 return res.json(result);
@@ -68,7 +68,7 @@ exports.getDeviceAppConfiguration = function (req, res) {
                 result.forEach(function(item, index){
                     _.pull(key, item.key);
                 });
-                CommonAppConfiguration.find({"key": {"$in": key}}).then(function(common){
+                CommonAppConfiguration.find({"key": {"$in": key}}, '-_id key value').then(function(common){
                    return res.json(_.union(result, common));
                 });
             }
@@ -76,8 +76,8 @@ exports.getDeviceAppConfiguration = function (req, res) {
             return res.json(err)
         });
     }else if(!key){
-        DeviceAppConfiguration.find({"macAddress": params.macAddress}).then(function(result){
-                CommonAppConfiguration.find().then(function(common){
+        DeviceAppConfiguration.find({"macAddress": params.macAddress}, '-_id key value').then(function(result){
+                CommonAppConfiguration.find({}, '-_id key value').then(function(common){
                     debug('not key for get the every app configuration success');
                     //TODO 有更好的算法
                     result.forEach(function(item, index){
@@ -92,9 +92,9 @@ exports.getDeviceAppConfiguration = function (req, res) {
                 })
         });
     }else{
-        DeviceAppConfiguration.find({"macAddress": params.macAddress, "key": key}).then(function(result){
+        DeviceAppConfiguration.find({"macAddress": params.macAddress, "key": key}, '-_id key value').then(function(result){
             if(result.length === 0){
-                CommonAppConfiguration.find({"key": key}).then(function(common){
+                CommonAppConfiguration.find({"key": key}, '-_id key value').then(function(common){
                     debug('one key for get the common app configuration success');
                     return res.json(common);
                 })
@@ -142,7 +142,7 @@ exports.deviceAppConfigurationSync = function(req, res){
 // 配置变更通知
 exports.pushDeviceAppConfiguration = function(macAddresses, keys){
     var data = {
-        deviceTopic: 'appconfiguration/modify/request',
+        deviceTopic: 'apps_configuration/modify/request',
         payload: keys
     };
     macAddresses.forEach(function(item, index){
