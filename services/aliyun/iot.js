@@ -108,8 +108,12 @@ function wrap(method, version) {
     }
 
     // 发送内容序列化
-    if (opts.MessageContent && typeof opts.MessageContent !== 'string') {
-      opts.MessageContent = new Buffer(JSON.stringify(opts.MessageContent)).toString('base64');
+    if (opts.MessageContent) {
+      let content = opts.MessageContent;
+      if (typeof opts.MessageContent !== 'string') {
+        content = JSON.stringify(content);
+      }
+      opts.MessageContent = new Buffer(content).toString('base64');
     }
 
     if (!cb) {
