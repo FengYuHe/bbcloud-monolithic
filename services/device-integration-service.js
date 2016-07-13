@@ -139,17 +139,40 @@ exports.deviceAppConfigurationSync = function(req, res){
     });
 };
 
+/**
+ *
+ * @param macAddresses {Array} mac地址集合
+ * @param keys {Array} 变更的key, 为空时参数传入 []
+ * @param assets {Array}
+ */
 // 配置变更通知
-exports.pushDeviceAppConfiguration = function(macAddresses, keys){
+exports.pushDeviceAppConfiguration = function(macAddresses, keys, assets){
     var data = {
         deviceTopic: 'apps_configuration/modify/request',
-        payload: keys
+        payload: {}
     };
+    if(keys && keys.length !== 0){
+        data.payload.keys = keys;
+    }
+    if(assets && assets.length !==0){
+        data.payload.assets = assets;
+    }
+    debug('push device app configuration :', data);
     macAddresses.forEach(function(item, index){
-        iot.pub({MacAddress: item, MessageContent: data});
+        iot.pub({MacAddress: item, MessageContent: data}, function(err, result){
+            if(err) debug.error(err);
+            console.log(result);
+            debug('iot result:' , result);
+        });
     });
 };
 
+/**
+ *
+ * @param data
+ *  * key {String} 需要更新设置的key
+ *  * macAddress {String} macAddress
+ */
 //设备App设置更新服务
 exports.upsertDeviceAppConfiguration = function(data){
     var where = {};
@@ -171,6 +194,11 @@ exports.upsertDeviceAppConfiguration = function(data){
     });
 };
 
+/**
+ *
+ * @param data
+ * * key {String} 需要更新设置的key
+ */
 //通用App设置更新服务
 exports.upsertCommonAppConfiguration = function(data){
     var where = {};
