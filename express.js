@@ -21,6 +21,6 @@ app.use(connectMultiparty());
 app.use(require('./routers').router);
 app.use(require('./errorHandler'));
 
-app.listen(nconf.get('port') || 3000, function() {
+app.listen(nconf.get('port') || 3000, '127.0.0.1', function() {
   console.log('Server running at http://127.0.0.1:' + nconf.get('port') || 3000);
 });

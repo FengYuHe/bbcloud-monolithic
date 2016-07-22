@@ -3,6 +3,7 @@ var deviceIntegration = require('../services/device-integration-service');
 
 //TODO 健康检查,暂时写在此
 router.get('/health-check', function(req, res){
+    console.log(req.ip);
     res.json({msg: "ok"});
 });
 
